@@ -194,8 +194,6 @@ dotnet test tests/BackendApi.Tests
 | Document | Description |
 |:---|:---|
 | [`HOW_TO_RUN.md`](HOW_TO_RUN.md) | Detailed setup and run instructions |
-| [`APP_FLOW_AND_PLANS.md`](APP_FLOW_AND_PLANS.md) | Application flow, feature status, and improvement roadmap |
-| [`lastnight.md`](lastnight.md) | Complete project changelog |
 
 ---
 
