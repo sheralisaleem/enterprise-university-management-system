@@ -1,0 +1,81 @@
+@{
+    var role = ViewBag.Role as string ?? "";
+    var events = ViewBag.Events as List<WebDashboard.Controllers.EventVm> ?? new();
+}
+
+<div class="section-group" id="events">
+    <h2>Events</h2>
+    
+    @if (role == "Admin")
+    {
+        var buildings = ViewBag.Buildings as List<WebDashboard.Controllers.BuildingVm> ?? new();
+        <section style="margin-bottom: 2rem;">
+            <h1>Create Event</h1>
+            <p class="lede">Select floors below; rooms on those floors become the suggestion pool. Default slot 15 minutes.</p>
+            <form method="post" asp-action="CreateEvent" class="event-form">
+                <div class="inline-form">
+                    <input name="name" placeholder="Open House 2026" required />
+                    <input name="startDate" type="datetime-local" required />
+                    <input name="endDate" type="datetime-local" required />
+                    <input name="slotDurationMinutes" type="number" value="15" min="5" title="Slot minutes" />
+                </div>
+                <fieldset class="floor-picker">
+                    <legend>Floors for this event</legend>
+                    <div class="floor-actions">
+                        <button type="button" class="ghost" onclick="document.querySelectorAll('input[name=floorIds]').forEach(c => c.checked = true)">Select all</button>
+                        <button type="button" class="ghost" onclick="document.querySelectorAll('input[name=floorIds]').forEach(c => c.checked = false)">Clear</button>
+                    </div>
+                    @foreach (var b in buildings.OrderBy(x => x.Code))
+                    {
+                        <div class="floor-building">
+                            <h2>@b.Name (@b.Code)</h2>
+                            <div class="floor-grid">
+                            @foreach (var f in b.Floors.OrderBy(x => x.LevelNumber))
+                            {
+                                <label class="floor-option">
+                                    <input type="checkbox" name="floorIds" value="@f.Id" />
+                                    <span>@f.Name <small>@f.Rooms.Count rooms · e.g. @(f.Rooms.OrderBy(r => r.Code).FirstOrDefault()?.Code)</small></span>
+                                </label>
+                            }
+                            </div>
+                        </div>
+                    }
+                </fieldset>
+                <button type="submit">Create event</button>
+            </form>
+        </section>
+    }
+    
+    <section>
+        <div style="display: flex; justify-content: space-between; align-items: baseline;">
+            <h1>All Events (@events.Count)</h1>
+        </div>
+        
+        <div class="filter-bar">
+            <input type="search" class="filter-search" placeholder="Search events by name..." />
+            <select class="filter-select" data-filter-key="status">
+                <option value="">All Statuses</option>
+                <option value="OPEN">Open</option>
+                <option value="LOCKED">Locked</option>
+            </select>
+        </div>
+
+        <div class="stack" style="margin-bottom: 2rem;">
+        @foreach (var e in events)
+        {
+            var statusStr = e.IsFinalized ? "LOCKED" : "OPEN";
+            <article class="row searchable-card" data-search="@e.Name" data-status="@statusStr">
+                <div>
+                    <h2>@e.Name</h2>
+                    <p><span class="badge @(e.IsFinalized ? "accepted" : "submitted")" style="margin-right: 0.5rem;">@statusStr</span> @e.StartDate.ToLocalTime() → @e.EndDate.ToLocalTime() · @e.SlotDurationMinutes min slots</p>
+                </div>
+                @if (role == "Admin" && !e.IsFinalized)
+                {
+                    <form method="post" asp-action="Finalize"><input type="hidden" name="eventId" value="@e.Id" /><button type="submit">Finalize & Notify</button></form>
+                }
+            </article>
+        }
+        @if (!events.Any()) { <p class="empty-state">No events created yet.</p> }
+        </div>
+    </section>
+</div>

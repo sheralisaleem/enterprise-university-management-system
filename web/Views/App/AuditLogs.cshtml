@@ -1,0 +1,90 @@
+@model List<WebDashboard.Controllers.AuditLogVm>
+@{
+    ViewData["Title"] = "Audit Logs";
+}
+
+@functions {
+    string GetHumanReadableAction(string action, string tableName) {
+        var actionWord = action switch {
+            "Added" => "Created a new",
+            "Modified" => "Updated",
+            "Deleted" => "Deleted",
+            _ => action
+        };
+        
+        var entityWord = tableName switch {
+            "ProjectGroups" => "Project Group",
+            "ProjectSubmissions" => "Project Submission",
+            "Evaluations" => "Evaluation",
+            "Events" => "Event",
+            "Users" => "User",
+            _ => tableName
+        };
+        
+        return $"{actionWord} {entityWord}";
+    }
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-journal-text text-primary"></i> System Audit Logs</h2>
+    <a href="/App/Home" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Back to Dashboard</a>
+</div>
+
+<div class="card shadow-sm border-0">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover table-striped mb-0 align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th>Timestamp</th>
+                        <th>User</th>
+                        <th>Action</th>
+                        <th>Table (PK)</th>
+                        <th>Changes</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach(var log in Model)
+                    {
+                        var actionColor = log.Action == "Added" ? "success" : (log.Action == "Deleted" ? "danger" : "warning");
+                        <tr>
+                            <td class="text-nowrap text-muted small">
+                                @log.Timestamp.ToLocalTime().ToString("g")
+                            </td>
+                            <td>
+                                <div class="fw-bold">@log.UserName</div>
+                                <div class="text-muted small">@log.UserEmail</div>
+                            </td>
+                            <td>
+                                <div class="fw-bold mb-1" style="font-size: 0.95rem;">@GetHumanReadableAction(log.Action, log.TableName)</div>
+                                <span class="badge bg-@actionColor">@log.Action</span>
+                            </td>
+                            <td>
+                                <div class="fw-bold">@log.TableName</div>
+                                <div class="text-muted small">PK: @log.PrimaryKey</div>
+                            </td>
+                            <td style="max-width: 350px;">
+                                <div style="max-height: 100px; overflow-y: auto; font-size: 0.85rem;">
+                                    @if (!string.IsNullOrEmpty(log.OldValues))
+                                    {
+                                        <div class="text-danger mb-1"><strong>Old:</strong> <span style="word-break: break-all;">@log.OldValues</span></div>
+                                    }
+                                    @if (!string.IsNullOrEmpty(log.NewValues))
+                                    {
+                                        <div class="text-success"><strong>New:</strong> <span style="word-break: break-all;">@log.NewValues</span></div>
+                                    }
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                    @if(!Model.Any())
+                    {
+                        <tr>
+                            <td colspan="5" class="text-center text-muted py-4">No audit logs found.</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

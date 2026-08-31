@@ -1,0 +1,88 @@
+@{
+    var role = ViewBag.Role as string ?? "";
+    var groups = ViewBag.Groups as List<WebDashboard.Controllers.GroupVm> ?? new();
+    var domains = ViewBag.Domains as List<WebDashboard.Controllers.DomainVm> ?? new();
+    var advisors = ViewBag.Advisors as List<WebDashboard.Controllers.AdvisorVm> ?? new();
+    var events = ViewBag.Events as List<WebDashboard.Controllers.EventVm> ?? new();
+}
+
+<div class="section-group" id="groups">
+    <h2>My Groups</h2>
+
+    @if (role == "Student")
+    {
+        <section style="margin-bottom: 2rem;">
+            <h1>Create Group</h1>
+            <form method="post" asp-action="CreateGroup" class="stack">
+                <div class="inline-form">
+                    <input name="title" placeholder="Project title" required />
+                    <select name="eventId" required>
+                        <option value="">-- Select Event --</option>
+                        @foreach (var e in events){<option value="@e.Id">@e.Name</option>}
+                    </select>
+                    <select name="domainId">@foreach (var d in domains){<option value="@d.Id">@d.Name</option>}</select>
+                    <select name="advisorUserId">@foreach (var a in advisors){<option value="@a.Id">@a.FullName (@a.Domain)</option>}</select>
+                </div>
+                
+                <fieldset class="floor-picker" style="padding-bottom: 1.5rem;">
+                    <legend>Group Members</legend>
+                    <div class="inline-form">
+                        <input name="member1Name" placeholder="Member 1 Name (You)" value="@ViewBag.Name" required />
+                        <input name="member1Email" placeholder="Member 1 Email" type="email" required />
+                        <input name="member1RegId" placeholder="Member 1 Registration ID" required />
+                    </div>
+                    <div class="inline-form">
+                        <input name="member2Name" placeholder="Member 2 Name" required />
+                        <input name="member2Email" placeholder="Member 2 Email" type="email" required />
+                        <input name="member2RegId" placeholder="Member 2 Registration ID" required />
+                    </div>
+                    <div class="inline-form">
+                        <input name="member3Name" placeholder="Member 3 Name" required />
+                        <input name="member3Email" placeholder="Member 3 Email" type="email" required />
+                        <input name="member3RegId" placeholder="Member 3 Registration ID" required />
+                    </div>
+                </fieldset>
+                
+                <button type="submit" style="justify-self: start;">Create group</button>
+            </form>
+        </section>
+
+        <section>
+            <div style="display: flex; justify-content: space-between; align-items: baseline;">
+                <h1>My Existing Groups (@groups.Count)</h1>
+            </div>
+
+            <div class="filter-bar">
+                <input type="search" class="filter-search" placeholder="Search by group title or member name..." />
+                <select class="filter-select" data-filter-key="domain">
+                    <option value="">All Domains</option>
+                    @foreach(var d in groups.Select(g => g.DomainName).Distinct().OrderBy(x => x)) {
+                        <option value="@d">@d</option>
+                    }
+                </select>
+            </div>
+
+            <div class="stack" style="margin-bottom: 2rem;">
+            @foreach (var g in groups)
+            {
+                var searchStr = (g.Title + " " + string.Join(" ", g.Members.Select(m => m.FullName))).ToLower();
+                <article class="row searchable-card" style="align-items: flex-start;" data-search="@searchStr" data-domain="@g.DomainName">
+                    <div>
+                        <h2>@g.Title</h2>
+                        <p><span class="badge submitted">@g.DomainName</span> · Advisor @g.AdvisorName</p>
+                        <div style="margin-top: 1rem;">
+                            <strong>Members:</strong>
+                            <ul class="room-list" style="margin-top: 0.5rem;">
+                                @foreach(var m in g.Members) {
+                                    <li>@m.FullName @(string.IsNullOrEmpty(m.StudentId) ? "" : $"({m.StudentId})") &lt;@m.Email&gt; @(m.IsLeader ? "⭐" : "")</li>
+                                }
+                            </ul>
+                        </div>
+                    </div>
+                </article>
+            }
+            @if (!groups.Any()) { <p class="empty-state">No groups created yet.</p> }
+            </div>
+        </section>
+    }
+</div>

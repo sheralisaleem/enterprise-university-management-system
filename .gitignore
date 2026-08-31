@@ -1,0 +1,88 @@
+# ──────────────────────────────────────
+# .NET / C#
+# ──────────────────────────────────────
+**/bin/
+**/obj/
+**/uploads/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+*.csproj.user
+*.DotSettings.user
+project.lock.json
+*.nuget.props
+*.nuget.targets
+
+# NuGet
+**/packages/
+*.nupkg
+
+# Visual Studio
+.vs/
+launchSettings.json.bak
+
+# User secrets / local DBs
+*.db
+*.sqlite
+*.sqlite3
+*.mdf
+*.ldf
+
+# ──────────────────────────────────────
+# Flutter / Dart
+# ──────────────────────────────────────
+mobile/.dart_tool/
+mobile/build/
+mobile/.flutter-plugins
+mobile/.flutter-plugins-dependencies
+mobile/.packages
+mobile/.pub-cache/
+mobile/.pub/
+mobile/*.iml
+mobile/android/local.properties
+mobile/android/.gradle/
+mobile/android/app/build/
+mobile/ios/Pods/
+
+# ──────────────────────────────────────
+# Python (Scripts / Utilities)
+# ──────────────────────────────────────
+__pycache__/
+*.pyc
+.venv/
+venv/
+.env
+
+# ──────────────────────────────────────
+# Logs
+# ──────────────────────────────────────
+*.log
+
+# ──────────────────────────────────────
+# OS / IDE
+# ──────────────────────────────────────
+.DS_Store
+Thumbs.db
+Desktop.ini
+*.swp
+*.swo
+*~
+.idea/
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+# ──────────────────────────────────────
+# Agent / AI tooling
+# ──────────────────────────────────────
+.agents/
+.gemini/
+
+# ──────────────────────────────────────
+# Project-specific (internal docs)
+# ──────────────────────────────────────
+lastnight.md
+APP_FLOW_AND_PLANS.md

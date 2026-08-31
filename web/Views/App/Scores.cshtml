@@ -1,0 +1,30 @@
+@{
+    var role = ViewBag.Role as string ?? "";
+    var evaluations = ViewBag.Evaluations as List<WebDashboard.Controllers.EvaluationVm> ?? new();
+}
+
+<div class="section-group" id="scores">
+    <h2>Scores</h2>
+
+    @if (role is "Admin" or "Advisor")
+    {
+        <section>
+            <div style="display: flex; justify-content: space-between; align-items: baseline;">
+                <h1>Evaluation Results (@evaluations.Count)</h1>
+            </div>
+
+            <div class="filter-bar">
+                <input type="search" class="filter-search" placeholder="Search by project title or evaluator name..." />
+            </div>
+
+            <div class="stack">
+            @foreach (var e in evaluations)
+            {
+                var searchStr = (e.ProjectTitle + " " + e.EvaluatorName).ToLower();
+                <article class="row searchable-card" data-search="@searchStr"><div><h2>@e.ProjectTitle</h2><p>📊 Avg <strong>@e.AverageScore / 5</strong> · Evaluator @e.EvaluatorName · @e.Thoughts</p></div></article>
+            }
+            @if (!evaluations.Any()) { <p class="empty-state">No scores submitted yet.</p> }
+            </div>
+        </section>
+    }
+</div>

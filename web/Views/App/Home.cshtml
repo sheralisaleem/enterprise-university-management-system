@@ -1,0 +1,61 @@
+@{
+    var role = ViewBag.Role as string ?? "";
+    var name = ViewBag.Name as string ?? "";
+    var summary = ViewBag.Summary as Dictionary<string, int> ?? new();
+}
+
+@functions {
+    string GetUrlForKey(string key) => key switch {
+        "ActiveEvents" => "/App/Events",
+        "TotalGroups" => "/App/Submissions",
+        "TotalSubmissions" => "/App/Submissions",
+        "UnassignedGroups" => "/App/Submissions",
+        "ActiveDomains" => "/App/Settings",
+        "GroupsAdvising" => "/App/Submissions",
+        "PendingApprovals" => "/App/Submissions",
+        "AssignedSubmissions" => "/App/Submissions",
+        "PendingEvaluations" => "/App/Scores",
+        "ActiveGroups" => "/App/Groups",
+        "MyGroups" => "/App/Groups",
+        "MySubmissions" => "/App/Submissions",
+        _ => "#"
+    };
+
+    string GetActionTextForKey(string key) => key switch {
+        "ActiveEvents" => "Manage Events",
+        "TotalGroups" => "View All",
+        "TotalSubmissions" => "Manage Submissions",
+        "UnassignedGroups" => "Assign Now",
+        "ActiveDomains" => "Manage Domains",
+        "GroupsAdvising" => "View Submissions",
+        "PendingApprovals" => "Review Now",
+        "AssignedSubmissions" => "View Assignments",
+        "PendingEvaluations" => "Go to Scores",
+        "ActiveGroups" => "Manage Groups",
+        "MyGroups" => "Manage Groups",
+        "MySubmissions" => "View Submissions",
+        _ => "View Details"
+    };
+}
+
+<div class="section-group" id="my-actions">
+    <h2>Dashboard Overview</h2>
+    <p class="lede">Welcome back, @name! Here is a summary of your active items.</p>
+    
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-top: 2rem;">
+        @foreach (var kvp in summary)
+        {
+            var isAlert = (kvp.Key == "UnassignedGroups" || kvp.Key == "PendingApprovals") && kvp.Value > 0;
+            <div style="background: @(isAlert ? "#fef2f2" : "var(--panel)"); padding: 1.5rem; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); border: @(isAlert ? "2px solid #dc2626" : "1px solid var(--line)"); display: flex; flex-direction: column; @(isAlert ? "transform: scale(1.02); transition: transform 0.2s;" : "")">
+                <h3 style="margin: 0; font-size: 1rem; color: @(isAlert ? "#991b1b" : "var(--muted)");">
+                    @if (isAlert) { <text>⚠️ </text> }
+                    @System.Text.RegularExpressions.Regex.Replace(kvp.Key, "([A-Z])", " $1").Trim()
+                </h3>
+                <p style="margin: 0.5rem 0 1.5rem 0; font-size: 2.5rem; font-weight: bold; color: @(isAlert ? "#dc2626" : "var(--accent)");">@kvp.Value</p>
+                <a href="@GetUrlForKey(kvp.Key)" class="btn ghost" style="margin-top: auto; text-align: center; text-decoration: none; border: 1px solid @(isAlert ? "#dc2626" : "var(--line)"); border-radius: 4px; padding: 0.5rem; @(isAlert ? "background: #dc2626; color: white; font-weight: bold;" : "")">
+                    @GetActionTextForKey(kvp.Key) &rarr;
+                </a>
+            </div>
+        }
+    </div>
+</div>

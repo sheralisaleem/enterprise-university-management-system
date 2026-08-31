@@ -1,0 +1,33 @@
+@{
+    var role = ViewBag.Role as string ?? "";
+    var domains = ViewBag.Domains as List<WebDashboard.Controllers.DomainVm> ?? new();
+    var outbox = ViewBag.Outbox as List<WebDashboard.Controllers.EmailVm> ?? new();
+}
+
+<div class="section-group" id="settings">
+    <h2>Settings & Administration</h2>
+    
+    <section>
+        <h1>Manage Domains</h1>
+        <form method="post" asp-action="AddDomain" class="inline-form">
+            <input name="name" placeholder="New domain" required />
+            <button type="submit">Add domain</button>
+        </form>
+        @if (domains.Any())
+        {
+            <p style="margin-top: 1rem;"><strong>Active Domains:</strong> @(string.Join(" · ", domains.Select(d => d.Name)))</p>
+        }
+    </section>
+
+    <section>
+        <h1>Email Outbox</h1>
+        <div class="stack">
+        @{var emailList = outbox.Where(x => !x.Subject.Contains("Added to FYP showcase group")).Take(8).ToList();}
+        @foreach (var e in emailList)
+        {
+            <article class="row"><div><h2>@e.Subject</h2><p>→ @e.ToEmail</p></div></article>
+        }
+        @if (!emailList.Any()) { <p class="empty-state">No emails sent yet.</p> }
+        </div>
+    </section>
+</div>

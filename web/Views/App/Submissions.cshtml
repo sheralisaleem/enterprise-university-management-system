@@ -1,0 +1,176 @@
+@{
+    var role = ViewBag.Role as string ?? "";
+    var submissions = ViewBag.Submissions as List<WebDashboard.Controllers.SubmissionVm> ?? new();
+    
+    var pendingForMe = submissions.Where(s => 
+        (role == "Advisor" && s.Status == "Submitted") ||
+        (role == "Admin" && s.Status == "AdvisorApproved") ||
+        (role == "Student" && (s.Status == "AdvisorRejected" || s.Status == "AdminRejected") && !s.StudentAcknowledgedRejection)
+    ).ToList();
+}
+
+<div class="section-group" id="pending-reviews">
+    <h2>Pending Reviews</h2>
+    
+    @if (pendingForMe.Any())
+    {
+        <section>
+            <h1>Action Required (@pendingForMe.Count)</h1>
+            <div class="stack">
+            @foreach (var s in pendingForMe.Take(5))
+            {
+                <article class="row" style="padding: 1rem;">
+                    <div>
+                        <h2 style="font-size: 1.1rem; margin-bottom: 0.2rem;">@s.ProjectTitle</h2>
+                        <p style="font-size: 0.9rem; margin: 0;">@s.EventName · <span class="badge @s.Status.ToLower()">@s.Status</span> 
+                            @if (s.Status is "Accepted" or "RoomAssigned" or "Scheduled") {
+                                @if (s.RoomCode != null) { <text>· Room @s.RoomCode</text> } else { <text>· <span style="color: #dc2626; font-weight: bold;">ROOM UNASSIGNED</span></text> }
+                                @if (s.EvaluatorName != null) { <text>· Eval @s.EvaluatorName</text> } else { <text>· <span style="color: #dc2626; font-weight: bold;">EVAL UNASSIGNED</span></text> }
+                            }
+                        </p>
+                        @if (s.AdvisorRejectReason != null) { <p class="error" style="margin: 0.2rem 0; font-size: 0.85rem;">❌ Advisor: @s.AdvisorRejectReason</p> }
+                        @if (s.AdminRejectReason != null) { <p class="error" style="margin: 0.2rem 0; font-size: 0.85rem;">❌ Admin: @s.AdminRejectReason</p> }
+                        <div style="margin-top: 0.5rem; font-size: 0.85rem; color: var(--muted);">
+                            <strong>Members:</strong> @string.Join(", ", s.Members.Select(m => m.FullName + (m.IsLeader ? "⭐" : "")))
+                        </div>
+                    </div>
+                    <div class="actions">
+                    @if (s.Files.Any())
+                    {
+                        <a class="btn" href="/App/DownloadAllFiles?submissionId=@s.Id" target="_blank" style="margin-right: 0.5rem;">Download All (ZIP)</a>
+                    }
+                    @if (role == "Student" && (s.Status == "AdvisorRejected" || s.Status == "AdminRejected") && !s.StudentAcknowledgedRejection)
+                    {
+                        <form method="post" asp-action="Acknowledge"><input type="hidden" name="submissionId" value="@s.Id" /><button type="submit">Acknowledge rejection</button></form>
+                    }
+                    @if (role == "Student" && s.Status is "Submitted" or "AdvisorRejected" or "AdminRejected" or "Draft")
+                    {
+                        <form method="post" asp-action="Upload" enctype="multipart/form-data" class="inline-form">
+                            <input type="hidden" name="submissionId" value="@s.Id" />
+                            <select name="fileType"><option>Document</option><option>Presentation</option><option>Banner</option><option>Source</option></select>
+                            <input type="file" name="file" required />
+                            <button type="submit">Upload</button>
+                        </form>
+                    }
+                    @if (role == "Advisor" && s.Status == "Submitted")
+                    {
+                        <form method="post" asp-action="AdvisorApprove"><input type="hidden" name="submissionId" value="@s.Id" /><button type="submit">Approve</button></form>
+                        <form method="post" asp-action="AdvisorReject" class="inline-form"><input type="hidden" name="submissionId" value="@s.Id" /><input name="reason" placeholder="Reason" required /><button class="ghost" type="submit">Reject</button></form>
+                    }
+                    @if (role == "Admin" && s.Status == "AdvisorApproved")
+                    {
+                        <form method="post" asp-action="AdminAccept"><input type="hidden" name="submissionId" value="@s.Id" /><button type="submit">Accept</button></form>
+                        <form method="post" asp-action="AdminReject" class="inline-form"><input type="hidden" name="submissionId" value="@s.Id" /><input name="reason" placeholder="Reason" required /><button class="ghost" type="submit">Reject</button></form>
+                    }
+                    </div>
+                </article>
+            }
+            </div>
+        </section>
+    }
+    else
+    {
+        <p class="empty-state">No pending reviews required.</p>
+    }
+</div>
+
+<div class="section-group" id="all-submissions">
+    <h2>All Submissions</h2>
+    <section>
+        <div style="display: flex; justify-content: space-between; align-items: baseline;">
+            <h1>All Submissions (@submissions.Count)</h1>
+        </div>
+
+        <div class="filter-bar">
+            <input type="search" class="filter-search" placeholder="Search by project title or member name..." />
+            <select class="filter-select" data-filter-key="status">
+                <option value="">All Statuses</option>
+                <option value="Draft">Draft</option>
+                <option value="Submitted">Submitted</option>
+                <option value="AdvisorApproved">Advisor Approved</option>
+                <option value="AdvisorRejected">Advisor Rejected</option>
+                <option value="Accepted">Accepted</option>
+                <option value="AdminRejected">Admin Rejected</option>
+                <option value="RoomAssigned">Room Assigned</option>
+                <option value="Scheduled">Scheduled</option>
+            </select>
+            <select class="filter-select" data-filter-key="event">
+                <option value="">All Events</option>
+                @foreach(var ev in submissions.Select(s => s.EventName).Distinct().OrderBy(e => e)) {
+                    <option value="@ev">@ev</option>
+                }
+            </select>
+        </div>
+
+        <div class="stack" style="margin-bottom: 2rem;">
+        @foreach (var s in submissions)
+        {
+            var searchStr = (s.ProjectTitle + " " + string.Join(" ", s.Members.Select(m => m.FullName))).ToLower();
+            <article class="row searchable-card" style="padding: 1rem;" data-search="@searchStr" data-status="@s.Status" data-event="@s.EventName">
+                <div>
+                    <h2 style="font-size: 1.1rem; margin-bottom: 0.2rem;">@s.ProjectTitle</h2>
+                    <p style="font-size: 0.9rem; margin: 0;">@s.EventName · @s.DomainName · <span class="badge @s.Status.ToLower()">@s.Status</span>
+                    @if (s.Status is "Accepted" or "RoomAssigned" or "Scheduled") {
+                        @if (s.RoomCode != null) { <text>· Room @s.RoomCode</text> } else { <text>· <span style="color: #dc2626; font-weight: bold;">ROOM UNASSIGNED</span></text> }
+                        @if (s.EvaluatorName != null) { <text>· Eval @s.EvaluatorName</text> } else { <text>· <span style="color: #dc2626; font-weight: bold;">EVAL UNASSIGNED</span></text> }
+                    }
+                    @if (s.EvaluationStart != null) { <text>· @s.EvaluationStart.Value.ToLocalTime() – @s.EvaluationEnd!.Value.ToLocalTime()</text> }
+                    </p>
+                    @if (s.AdvisorRejectReason != null) { <p class="error" style="margin: 0.2rem 0; font-size: 0.85rem;">Advisor: @s.AdvisorRejectReason</p> }
+                    @if (s.AdminRejectReason != null) { <p class="error" style="margin: 0.2rem 0; font-size: 0.85rem;">Admin: @s.AdminRejectReason</p> }
+                    <div style="margin-top: 0.5rem; font-size: 0.85rem; color: var(--muted);">
+                        <strong>Members:</strong> @string.Join(", ", s.Members.Select(m => m.FullName + (m.IsLeader ? "⭐" : "")))
+                    </div>
+                </div>
+                <div class="actions">
+                @if (s.Files.Any())
+                {
+                    <a class="btn" href="/App/DownloadAllFiles?submissionId=@s.Id" target="_blank" style="margin-right: 0.5rem;">Download All (ZIP)</a>
+                }
+                @if (role == "Student" && (s.Status is "AdvisorRejected" or "AdminRejected") && !s.StudentAcknowledgedRejection)
+                {
+                    <form method="post" asp-action="Acknowledge"><input type="hidden" name="submissionId" value="@s.Id" /><button type="submit">Acknowledge rejection</button></form>
+                }
+                @if (role == "Student" && s.Status is "Submitted" or "AdvisorRejected" or "AdminRejected" or "Draft")
+                {
+                    <form method="post" asp-action="Upload" enctype="multipart/form-data" class="inline-form">
+                        <input type="hidden" name="submissionId" value="@s.Id" />
+                        <select name="fileType"><option>Document</option><option>Presentation</option><option>Banner</option><option>Source</option></select>
+                        <input type="file" name="file" required />
+                        <button type="submit">Upload</button>
+                    </form>
+                }
+                @if (role == "Advisor" && s.Status == "Submitted")
+                {
+                    <form method="post" asp-action="AdvisorApprove"><input type="hidden" name="submissionId" value="@s.Id" /><button type="submit">Approve</button></form>
+                    <form method="post" asp-action="AdvisorReject" class="inline-form"><input type="hidden" name="submissionId" value="@s.Id" /><input name="reason" placeholder="Reason" required /><button class="ghost" type="submit">Reject</button></form>
+                }
+                @if (role == "Admin" && s.Status == "AdvisorApproved")
+                {
+                    <form method="post" asp-action="AdminAccept"><input type="hidden" name="submissionId" value="@s.Id" /><button type="submit">Accept</button></form>
+                    <form method="post" asp-action="AdminReject" class="inline-form"><input type="hidden" name="submissionId" value="@s.Id" /><input name="reason" placeholder="Reason" required /><button class="ghost" type="submit">Reject</button></form>
+                }
+                @if (role == "Admin" && s.Status is "Accepted" or "RoomAssigned" or "Scheduled")
+                {
+                    <a class="btn" href="/App/ManageSubmission?id=@s.Id">Assign room / evaluator</a>
+                }
+                @if (role == "Evaluator" && s.EvaluationStart != null)
+                {
+                    <form method="post" asp-action="Score" class="inline-form">
+                        <input type="hidden" name="submissionId" value="@s.Id" />
+                        <input name="technicalDemo" type="number" min="1" max="5" value="4" title="Technical" />
+                        <input name="presentation" type="number" min="1" max="5" value="4" title="Presentation" />
+                        <input name="innovation" type="number" min="1" max="5" value="4" title="Innovation" />
+                        <input name="completeness" type="number" min="1" max="5" value="4" title="Completeness" />
+                        <input name="qa" type="number" min="1" max="5" value="4" title="Q&A" />
+                        <input name="thoughts" placeholder="Personal thoughts" />
+                        <button type="submit">Submit scores</button>
+                    </form>
+                }
+                </div>
+            </article>
+        }
+        @if (!submissions.Any()) { <p class="empty-state">No submissions yet.</p> }
+        </div>
+    </section>
+</div>

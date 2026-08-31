@@ -1,0 +1,167 @@
+@{
+    Layout = "_Layout";
+    var s = ViewBag.Submission as WebDashboard.Controllers.SubmissionVm;
+    var rooms = ViewBag.Rooms as List<WebDashboard.Controllers.RoomSuggestionVm> ?? new();
+    var evals = ViewBag.Evals as List<WebDashboard.Controllers.EvalRecVm> ?? new();
+}
+
+<div class="section-group">
+    @if (s != null)
+    {
+        <section style="margin-bottom: 2rem;">
+            <h1>@s.ProjectTitle</h1>
+            <p class="lede">@s.DomainName · @s.Status</p>
+            
+            <div style="display: flex; gap: 1rem; margin-top: 1.5rem; flex-wrap: wrap;">
+                <article class="card" style="flex: 1; min-width: 250px; border-left: 4px solid var(--accent); background: white; padding: 1.5rem; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+                    <h3 style="margin: 0; color: var(--muted); font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.05em;">Current Room</h3>
+                    <p style="font-size: 1.5rem; margin: 0.5rem 0 0; font-weight: 700; @(s.RoomCode == null ? "color: #dc2626;" : "")">@(s.RoomCode ?? "UNASSIGNED")</p>
+                </article>
+                <article class="card" style="flex: 1; min-width: 250px; border-left: 4px solid var(--accent-2); background: white; padding: 1.5rem; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+                    <h3 style="margin: 0; color: var(--muted); font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.05em;">Current Evaluator</h3>
+                    <p style="font-size: 1.5rem; margin: 0.5rem 0 0; font-weight: 700; @(s.EvaluatorName == null ? "color: #dc2626;" : "")">@(s.EvaluatorName ?? "UNASSIGNED")</p>
+                </article>
+            </div>
+        </section>
+
+        <section style="margin-bottom: 2rem;">
+            <h2>Assign Room</h2>
+            <form method="post" asp-action="AssignRoom" class="stack" style="background: white; padding: 1.5rem; border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+                <input type="hidden" name="submissionId" value="@s.Id" />
+                <div class="inline-form" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
+                    <div style="display: flex; flex-direction: column; gap: 0.4rem;">
+                        <label style="font-weight: 600; font-size: 0.9rem;">Building</label>
+                        <select id="buildingSelect" style="width: 100%;">
+                            <option value="">-- Select Building --</option>
+                        </select>
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 0.4rem;">
+                        <label style="font-weight: 600; font-size: 0.9rem;">Floor</label>
+                        <select id="floorSelect" style="width: 100%;" disabled>
+                            <option value="">-- Select Floor --</option>
+                        </select>
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 0.4rem;">
+                        <label style="font-weight: 600; font-size: 0.9rem;">Room</label>
+                        <select name="roomId" id="roomSelect" style="width: 100%;" disabled required>
+                            <option value="">-- Select Room --</option>
+                        </select>
+                    </div>
+                </div>
+                <div id="roomCapacity" style="font-size: 0.9rem; color: var(--muted); margin-top: 0.5rem; min-height: 1.2rem;"></div>
+                <button type="submit" class="btn" style="justify-self: start; margin-top: 1rem;">Assign Room</button>
+            </form>
+        </section>
+
+        <section>
+            <h2>Assign Evaluator</h2>
+            <form method="post" asp-action="AssignEvaluator" class="stack" style="background: white; padding: 1.5rem; border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+                <input type="hidden" name="submissionId" value="@s.Id" />
+                <div class="inline-form">
+                    <div style="display: flex; flex-direction: column; gap: 0.4rem;">
+                        <label style="font-weight: 600; font-size: 0.9rem;">Evaluator</label>
+                        <select name="evaluatorUserId" required style="width: 100%; min-width: 300px;">
+                            <option value="">-- Select Evaluator --</option>
+                            <optgroup label="Recommended (Domain Match)">
+                                @foreach(var e in evals.Where(e => e.DomainMatch)) {
+                                    <option value="@e.UserId">@e.FullName (@e.CurrentAssignments assigned)</option>
+                                }
+                            </optgroup>
+                            <optgroup label="Others">
+                                @foreach(var e in evals.Where(e => !e.DomainMatch)) {
+                                    <option value="@e.UserId">@e.FullName (@e.CurrentAssignments assigned) - @e.DomainName</option>
+                                }
+                            </optgroup>
+                        </select>
+                    </div>
+                </div>
+                <button type="submit" class="btn" style="justify-self: start; margin-top: 1rem;">Assign Evaluator</button>
+            </form>
+        </section>
+    }
+</div>
+
+@section Scripts {
+    <script>
+        const roomsData = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(rooms));
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            const buildingSelect = document.getElementById('buildingSelect');
+            const floorSelect = document.getElementById('floorSelect');
+            const roomSelect = document.getElementById('roomSelect');
+            const capacityDiv = document.getElementById('roomCapacity');
+            
+            const buildingsMap = new Map();
+            roomsData.forEach(r => {
+                buildingsMap.set(r.BuildingName, (buildingsMap.get(r.BuildingName) || 0) + r.Remaining);
+            });
+            const buildings = [...buildingsMap.keys()].sort();
+            buildings.forEach(b => {
+                const opt = document.createElement('option');
+                opt.value = b; 
+                opt.textContent = `${b} (${buildingsMap.get(b)} slots)`;
+                buildingSelect.appendChild(opt);
+            });
+            
+            buildingSelect.addEventListener('change', function() {
+                floorSelect.innerHTML = '<option value="">-- Select Floor --</option>';
+                roomSelect.innerHTML = '<option value="">-- Select Room --</option>';
+                capacityDiv.textContent = '';
+                roomSelect.disabled = true;
+                
+                const selectedBuilding = this.value;
+                if (!selectedBuilding) {
+                    floorSelect.disabled = true;
+                    return;
+                }
+                
+                const floorsMap = new Map();
+                roomsData.filter(r => r.BuildingName === selectedBuilding).forEach(r => {
+                    floorsMap.set(r.FloorName, (floorsMap.get(r.FloorName) || 0) + r.Remaining);
+                });
+                const floors = [...floorsMap.keys()].sort();
+                floors.forEach(f => {
+                    const opt = document.createElement('option');
+                    opt.value = f; 
+                    opt.textContent = `${f} (${floorsMap.get(f)} slots)`;
+                    floorSelect.appendChild(opt);
+                });
+                floorSelect.disabled = false;
+            });
+            
+            floorSelect.addEventListener('change', function() {
+                roomSelect.innerHTML = '<option value="">-- Select Room --</option>';
+                capacityDiv.textContent = '';
+                
+                const selectedBuilding = buildingSelect.value;
+                const selectedFloor = this.value;
+                
+                if (!selectedFloor) {
+                    roomSelect.disabled = true;
+                    return;
+                }
+                
+                const filteredRooms = roomsData.filter(r => r.BuildingName === selectedBuilding && r.FloorName === selectedFloor).sort((a,b) => a.Code.localeCompare(b.Code));
+                filteredRooms.forEach(r => {
+                    const opt = document.createElement('option');
+                    opt.value = r.RoomId; 
+                    opt.textContent = `${r.Code} (${r.Remaining} slots)`;
+                    opt.dataset.assigned = r.AssignedCount;
+                    opt.dataset.max = r.MaxGroups;
+                    opt.dataset.remaining = r.Remaining;
+                    roomSelect.appendChild(opt);
+                });
+                roomSelect.disabled = false;
+            });
+            
+            roomSelect.addEventListener('change', function() {
+                const selectedOpt = this.options[this.selectedIndex];
+                if (!this.value) {
+                    capacityDiv.textContent = '';
+                    return;
+                }
+                capacityDiv.textContent = `${selectedOpt.dataset.assigned} / ${selectedOpt.dataset.max} groups assigned. Remaining capacity: ${selectedOpt.dataset.remaining}`;
+            });
+        });
+    </script>
+}
